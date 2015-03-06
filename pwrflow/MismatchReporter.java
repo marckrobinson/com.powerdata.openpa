@@ -18,4 +18,6 @@ public interface MismatchReporter
 	void reportMismatch(float[] pmm, float[] qmm, float[] vm, float[] va, BusType[] type)
 		throws PAModelException;
 	void reportEnd();
+	/** Only report the final mismatches */
+	boolean reportLast();
 }

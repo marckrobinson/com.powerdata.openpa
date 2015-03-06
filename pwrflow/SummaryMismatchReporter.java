@@ -96,5 +96,11 @@ public class SummaryMismatchReporter implements MismatchReporter
 			e.printStackTrace();
 		}
 	}
+
+	@Override
+	public boolean reportLast()
+	{
+		return false;
+	}
 	
 }

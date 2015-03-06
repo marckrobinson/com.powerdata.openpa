@@ -24,11 +24,13 @@ public class DetailMismatchReporter implements MismatchReporter
 	String _pad;
 	PrintWriter _pw;
 	int _iter = 0;
+	boolean _last = false;
 	
-	public DetailMismatchReporter(PAModel model, File dir)
+	public DetailMismatchReporter(PAModel model, File dir, boolean lastOnly)
 	{
 		_dir = dir;
 		_m = model;
+		_last = lastOnly;
 	}
 	
 	@Override
@@ -36,6 +38,14 @@ public class DetailMismatchReporter implements MismatchReporter
 	{
 		_buses = buses;
 		return this;
+	}
+	
+	
+
+	@Override
+	public boolean reportLast()
+	{
+		return _last;
 	}
 
 	@Override
@@ -49,9 +59,9 @@ public class DetailMismatchReporter implements MismatchReporter
 					_dir, String.format("mismatches-%d.csv", _iter)))));
 			_pw.print("\"BusID\",\"Area\",");
 			if (usesta) _pw.print("\"Station\",");
-			_pw.println("\"BusName\",\"KV\",\"VM\", \"VA\",\"Pmm\",\"Qmm\",\"DevType\",\"DevName\",\"MW\",\"MVAr\",\"Tap\"");
+			_pw.println("\"BusName\",\"BusType\",\"KV\",\"VM\", \"VA\",\"Pmm\",\"Qmm\",\"DevType\",\"DevName\",\"MW\",\"MVAr\",\"Tap\"");
 			StringBuilder bpad = new StringBuilder();
-			for (int i = 0; i < (usesta ? 9 : 8); ++i)
+			for (int i = 0; i < (usesta ? 10 : 9); ++i)
 				bpad.append("\"\",");
 			_pad = bpad.toString();
 			for (Bus b : _buses)
@@ -59,8 +69,8 @@ public class DetailMismatchReporter implements MismatchReporter
 				_pw.format("\"%s\",\"%s\",", b.getID(), b.getArea().getName());
 				if (usesta) _pw.format("\"%s\",", b.getStation().getName());
 				int idx = b.getIndex();
-				_pw.format("\"%s\",%f,%f,%f,%f,%f\n", b.getName(), b
-						.getVoltageLevel().getBaseKV(), vm[idx], PAMath.rad2deg(va[idx]),
+				_pw.format("\"%s\",\"%s\",%f,%f,%f,%f,%f\n", b.getName(), (type == null) ? "" : type[idx], 
+						b.getVoltageLevel().getBaseKV(), vm[idx], va[idx],
 					pmm[idx], qmm[idx]);
 				reportACBranches(b);
 				report2TDCLines(b);

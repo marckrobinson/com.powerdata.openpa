@@ -269,7 +269,7 @@ public class ACPowerCalc
 		if (!outdir.exists()) outdir.mkdirs();
 		PflowModelBuilder bldr = PflowModelBuilder.Create(uri);
 		bldr.setLeastX(0.0001f);
-		bldr.enableFlatVoltage(true);
+		bldr.enableFlatVoltage(false);
 		PAModel m = bldr.load();
 		float sbase = 100f;
 
@@ -319,7 +319,7 @@ public class ACPowerCalc
 			Mismatch qmm = new Mismatch(bri, null, null);
 			calc.applyMismatch(pmm, qmm);
 			
-			MismatchReporter r = new DetailMismatchReporter(m, outdir).reportBegin(bri.getBuses());
+			MismatchReporter r = new DetailMismatchReporter(m, outdir, false).reportBegin(bri.getBuses());
 			r.reportMismatch(PAMath.pu2mva(pmm.get(), sbase), PAMath.pu2mva(qmm.get(), sbase), vm, PAMath.rad2deg(va), null);
 			r.reportEnd();
 		}

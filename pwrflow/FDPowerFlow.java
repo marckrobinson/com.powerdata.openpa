@@ -19,12 +19,14 @@ import com.powerdata.openpa.Gen;
 import com.powerdata.openpa.GenList;
 import com.powerdata.openpa.Island;
 import com.powerdata.openpa.IslandList;
+import com.powerdata.openpa.OneTermDev;
 import com.powerdata.openpa.PAModel;
 import com.powerdata.openpa.PAModelException;
 import com.powerdata.openpa.PflowModelBuilder;
 import com.powerdata.openpa.SVC;
 import com.powerdata.openpa.SVCList;
 import com.powerdata.openpa.SubLists;
+import com.powerdata.openpa.psse.GenMode;
 import com.powerdata.openpa.pwrflow.ACBranchFlows.ACBranchFlow;
 import com.powerdata.openpa.pwrflow.GenVarMonitor.Action;
 import com.powerdata.openpa.tools.FactorizedFltMatrix;
@@ -93,6 +95,8 @@ public class FDPowerFlow
 	public FDPowerFlow(PAModel model, BusRefIndex bri) throws PAModelException
 	{
 		_model = model;
+
+		cleanupOldResults();
 		
 		/* Create single-bus view of topology */
 		_bri = bri;
@@ -102,14 +106,12 @@ public class FDPowerFlow
 		
 		Collection<FixedShuntListIfc<? extends FixedShunt>> fsh = ACPowerCalc.setupFixedShunts(model);
 		_accalc = new ACPowerCalc(model, bri, fsh, ACPowerCalc.setupActiveLoads(bri, model, _sbase), _actvgen);
-			
-		
+
 		/* build adjacency matrix */
 		_adj = new ACBranchAdjacencies<>(_accalc.getBranchFlows(), 
 				_buses.size());
 
 		/* organize the model into bus types and select reference buses for each island */
-		//TODO:  Externalize BusTypeUtil creation so that it can be created once for multiple uses
 		_btu = new BusTypeUtil(model, _bri, _accalc.getPvSvcList());		
 		/* build factorization pattern */
 		_pat = new SpSymMtrxFactPattern();
@@ -134,6 +136,16 @@ public class FDPowerFlow
 		
 	}
 	
+	private void cleanupOldResults() throws PAModelException
+	{
+		GenList gens = _model.getGenerators();
+		Arrays.fill(gens.getP(), 0f);
+		Arrays.fill(gens.getQ(), 0f);
+		SVCList svcs = _model.getSVCs();
+		Arrays.fill(svcs.getP(), 0f);
+		Arrays.fill(svcs.getQ(), 0f);
+	}
+
 	class ActiveGenData extends Active1TData
 	{
 		int[] revidx;
@@ -279,7 +291,6 @@ public class FDPowerFlow
 		
 		for(MismatchReporter r : _mmreport)
 			r.reportBegin(_buses);
-
 		
 		boolean incomplete = true;//, dump = true;
 		for(int it=0; incomplete && it < _maxit; ++it)
@@ -319,8 +330,15 @@ public class FDPowerFlow
 		}
 		
 		for(MismatchReporter r : _mmreport)
+		{
+			if (r.reportLast())
+			{
+				r.reportMismatch(PAMath.pu2mva(pmm.get(),  _sbase), 
+					PAMath.pu2mva(_qmm.get(), _sbase), _vm, PAMath.rad2deg(_va), _btu.getTypes());
+			}
 			r.reportEnd();
-
+		}
+		
 		return rv;
 	}
 
@@ -354,9 +372,14 @@ public class FDPowerFlow
 		{
 			updateResults();
 			for (MismatchReporter r : _mmreport)
-				r.reportMismatch(PAMath.pu2mva(pmm.get(), _sbase),
-					PAMath.pu2mva(qmm.get(), _sbase), vm, PAMath.rad2deg(va),
-					_btu.getTypes());
+			{
+				if (!r.reportLast())
+				{
+					r.reportMismatch(PAMath.pu2mva(pmm.get(), _sbase),
+						PAMath.pu2mva(qmm.get(), _sbase), vm,
+						PAMath.rad2deg(va), _btu.getTypes());
+				}
+			}
 		}
 	}
 
@@ -385,45 +408,7 @@ public class FDPowerFlow
 	{
 		updateBusResults();
 		_accalc.updateResults();
-		int[] agbus = _actvgen.getBus();
-		int nag = agbus.length, navr=0;
-		boolean[] avr = _actvgen.inavr;
-		int[] avrsl = new int[nag];
-		for(int i=0; i < nag; ++i)
-		{
-			if(avr[i]) avrsl[navr++] = i;
-		}
-
-		for(int xi=0; xi < navr; ++xi)
-		{
-			int i = avrsl[xi];
-			int bx = agbus[i];
-			Bus b = _buses.get(bx);
-			float m = _qmm.get(bx);
-			GenList gens = b.getGenerators();
-			if (avr[i])
-			{
-				m /= (float) gens.size();
-				for(Gen g : gens)
-					g.setQ(m);
-			}
-			else
-			{
-				for(Gen g : gens)
-					g.setQ(g.getQS());
-			}
-		}
-		
-		SVCList pvsvc = _accalc.getPvSvcList();
-		for(SVC s : pvsvc)
-		{
-			if (!s.isOutOfSvc() && s.isRegKV())
-			{
-				int bx = _buses.getByBus(s.getBus()).getIndex();
-				
-			}
-		}
-		
+		updateVarMismatches();
 	}
 	
 	public void setMaxIterations(int i)
@@ -465,12 +450,13 @@ public class FDPowerFlow
 		PflowModelBuilder bldr = PflowModelBuilder.Create(uri);
 		bldr.enableFlatVoltage(true);
 		bldr.setLeastX(0.0001f);
-//		bldr.setUnitRegOverride(true);
+		bldr.setUnitRegOverride(true);
 //		bldr.enableRCorrection(true);
 		PAModel m = bldr.load();
 
 		FDPowerFlow pf = new FDPowerFlow(m, BusRefIndex.CreateFromSingleBuses(m));
-		pf.addMismatchReporter(new DetailMismatchReporter(m, outdir));
+//		pf.addMismatchReporter(new DetailMismatchReporter(m, outdir, true));
+		pf.addMismatchReporter(new SummaryMismatchReporter(outdir));
 		pf.setMaxIterations(40);
 		ConvergenceList results = pf.runPF();
 		pf.updateResults();
@@ -478,5 +464,182 @@ public class FDPowerFlow
 		
 	}
 
+//	/**  update var mismatches back to units & SVC's */
+//	class VarMismatchAllocator
+//	{
+//		final GetFloat<Gen> _gminq = l -> l.getMinQ(),
+//				_gmaxq = l -> l.getMaxQ();
+//		final GetFloat<SVC> _sminq = l -> l.getMinQ(),
+//				_smaxq = l -> l.getMaxQ();
+//		
+//		
+//		void updateVarMismatches() throws PAModelException
+//		{
+//			for(int bx : _btu.getBuses(BusType.PV))
+//			{
+//				Bus b = _buses.get(bx);
+//				updateBusMismatch(b, _qmm.get(bx));
+//			}
+//		}
+//
+//		private void updateBusMismatch(Bus b, float m) throws PAModelException
+//		{
+//			SVCList svcs = b.getSVCs();
+//			GenList gens = b.getGenerators();
+//			
+//		}
+//	}
+	
+	abstract static class VarAllocator
+	{
+		boolean _disable = false;
+		OneTermDev _dev;
+		
+		VarAllocator(OneTermDev dev) {_dev = dev;}
+		
+		abstract float getQLim() throws PAModelException;
 
+		/** Disable the allocator from further consideration */
+		void disable() {_disable = true;}
+
+		/** currently assigned MVAr */ 
+		float getQ() throws PAModelException {return _dev.getQ();}
+		
+		/** currently assigned MVAr */
+		void setQ(float q) throws PAModelException {_dev.setQ(q);}
+
+		static VarAllocator Create(SVC g, float m)
+		{
+			return (m < 0f) ? (new VarAllocator(g)
+			{
+				@Override
+				public float getQLim() throws PAModelException {return g.getMinQ();}
+			}) : (new VarAllocator(g)
+			{
+				@Override
+				float getQLim() throws PAModelException {return g.getMaxQ();} 
+
+			});
+		}
+		
+		static VarAllocator Create(Gen g, float m)
+		{
+			return (m < 0f) ? (new VarAllocator(g)
+			{
+				@Override
+				public float getQLim() throws PAModelException {return g.getMinQ();}
+			}) : (new VarAllocator(g)
+			{
+				@Override
+				float getQLim() throws PAModelException {return g.getMaxQ();} 
+
+			});
+		}
+	}
+	
+	/**
+	 * Update MVAr mismatches to generators and SVC located on the PV bus.
+	 * 
+	 * If multiple AVR equipment is located on the same bus, we dispatch the
+	 * mismatch scaled by the max var capability.
+	 * 
+	 * If a device hits a capability limit, then we re-calculate the
+	 * distribution factors and apply the remaining
+	 * 
+	 * @throws PAModelException
+	 */
+	void updateVarMismatches() throws PAModelException
+	{
+		for (int bx : _btu.getBuses(BusType.PV))
+		{
+			Bus b = _buses.get(bx);
+			float m = PAMath.mva2pu(_qmm.get(bx), _sbase);
+			VarAllocator[] vm = loadAllocators(b, m);
+			int n = vm.length;
+			while (m != 0f)
+			{
+				float[] pct = calcPcts(vm, m);
+				float unallocated = 0f;
+				for (int i = 0; i < n; ++i)
+				{
+					VarAllocator a = vm[i];
+					/** q max limit */
+					float qm = a.getQLim();
+					/** MVAr to assign */
+					float qa = a.getQ() + m * pct[i];
+					/** difference from limit */
+					float qd = qm - qa;
+					/*
+					 * If the difference has the opposite sign as the q max,
+					 * then we exceeded the capability. Put the difference back
+					 * on to the mismatch for now
+					 */
+					if (Math.signum(qm) == -1f * Math.signum(qd))
+					{
+						unallocated += qd;
+						qa = qm;
+						a.disable();
+					}
+					a.setQ(qa);
+				}
+				m = unallocated;
+			}
+		}
+	}
+	/**
+	 * Calculate the distribution of remaining vars based on current capability
+	 * 
+	 * @param vm
+	 * @param m
+	 * @return
+	 * @throws PAModelException
+	 */
+	private float[] calcPcts(VarAllocator[] vm, float m) throws PAModelException
+	{
+		int n = vm.length;
+		float[] rv = new float[n];
+		float max = 0f;
+		for (int i = 0; i < n; ++i)
+		{
+			float q = vm[i].getQLim();
+			rv[i] = q;
+			max += q;
+		}
+		for (int i = 0; i < n; ++i)
+			rv[i] /= max;
+		return rv;
+	}
+	/**
+	 * Return a list of objects that can handle the var dispatch regardless of
+	 * device type
+	 * 
+	 * @param b
+	 * @param m
+	 * @return
+	 * @throws PAModelException
+	 */
+	private VarAllocator[] loadAllocators(Bus b, float m) throws PAModelException
+	{
+		GenList gens = b.getGenerators();
+		SVCList svcs = b.getSVCs();
+		int ngen = gens.size(), nsvc = svcs.size();
+		VarAllocator[] rv = new VarAllocator[ngen + nsvc];
+		int n = 0;
+		for (Gen g : gens)
+		{
+			VarAllocator va = VarAllocator.Create(g, m);
+			if (va != null) rv[n++] = va;
+		}
+		for (SVC g : svcs)
+		{
+			VarAllocator va = VarAllocator.Create(g, m);
+			if (va != null) rv[n++] = va;
+		}
+		return Arrays.copyOf(rv, n);
+	}	
+	boolean isPVSvc(SVC svc) throws PAModelException
+	{
+		return (!svc.isOutOfSvc() && svc.isRegKV() && svc.getSlope() == 0f);
+	}
 }
+
