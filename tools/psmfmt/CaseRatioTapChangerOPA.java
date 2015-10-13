@@ -11,7 +11,8 @@ import com.powerdata.openpa.TransformerList;
 
 public class CaseRatioTapChangerOPA extends ExportOpenPA<TransformerList>
 {
-	FmtInfo[] _frmi;
+	protected FmtInfo[] _frmi;
+	
 	public CaseRatioTapChangerOPA(PAModel m) throws PAModelException
 	{
 		super(m.getTransformers(), CaseRatioTapChanger.values().length);
@@ -45,7 +46,6 @@ public class CaseRatioTapChangerOPA extends ExportOpenPA<TransformerList>
 		pw.close();
 
 	}
-	
 	
 	@Override
 	protected String getPsmFmtName()
