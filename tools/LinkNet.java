@@ -233,6 +233,42 @@ public class LinkNet
 		return new int[] {_far[endp],_far[endq]};
 	}
 
+	static class UsedNdx
+	{
+//		boolean[] _used;
+		int[] _ndx,_rndx;
+		int _pos = 0;
+		int _size;
+		UsedNdx(int size)
+		{
+			_size = size;
+//			_used = new boolean[size];
+			_ndx = new int[size];
+			_rndx = new int[size];
+			for(int i=0; i < size; ++i)
+			{
+				_ndx[i] = i;
+				_rndx[i] = i;
+			}
+		}
+		
+		void set(int ofs)
+		{
+			int x = _rndx[ofs];
+			_ndx[x] = _ndx[_pos]; 
+			_ndx[_pos] = ofs;
+			
+			_rndx[ofs] = _rndx[_pos++];
+			_rndx[_pos] = x;
+			
+		}
+		
+		int get()
+		{
+			return _ndx[_pos];
+		}
+	}
+	
 	/**
 	 * Determine all connected groups of buses.
 	 * @return two dimensional array[group][buses]
