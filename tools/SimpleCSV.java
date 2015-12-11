@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
- * Utility to easiy read and write CSV files.
+ * Utility to easily read and write CSV files.
  * 
  * This requires that the first row in the file is the "header" and not
  * data.
@@ -86,22 +86,40 @@ public class SimpleCSV
 	public String[] get(int col)
 	{
 		ArrayList<String> vals = _cols.get(col);
-		return (vals == null)?null:vals.toArray(new String[0]);
+		return (vals == null)?new String[0]:vals.toArray(new String[0]);
 	}
 	public String[] get(String col)
 	{
 		ArrayList<String> vals = _colsByName.get(col);
-		return (vals == null)?null:vals.toArray(new String[0]);
+		return (vals == null)?new String[0]:vals.toArray(new String[0]);
+	}
+	public boolean hasCol(String col) { return (_colsByName.get(col) != null); }
+	public long[] getLongs(int col) { return getLongs(get(col)); }
+	public long[] getLongs(String col) { return getLongs(get(col)); }
+	public long[] getLongs(String svals[])
+	{
+		long fvals[] = null;
+		int n = svals.length;
+		if (svals != null)
+		{
+			fvals = new long[n];
+			for(int i = 0; i < n; ++i)
+			{
+				fvals[i] = Long.parseLong(svals[i]);
+			}
+		}
+		return fvals;
 	}
 	public float[] getFloats(int col) { return getFloats(get(col)); }
 	public float[] getFloats(String col) { return getFloats(get(col)); }
 	public float[] getFloats(String svals[])
 	{
 		float fvals[] = null;
+		int n = svals.length;
 		if (svals != null)
 		{
-			fvals = new float[_rowCount];
-			for(int i=0; i<_rowCount; i++)
+			fvals = new float[n];
+			for(int i=0; i<n; i++)
 			{
 				fvals[i] = Float.parseFloat(svals[i]);
 			}
@@ -113,12 +131,29 @@ public class SimpleCSV
 	public int[] getInts(String svals[])
 	{
 		int fvals[] = null;
+		int n = svals.length;
 		if (svals != null)
 		{
-			fvals = new int[_rowCount];
-			for(int i=0; i<_rowCount; i++)
+			fvals = new int[n];
+			for(int i=0; i<n; i++)
 			{
 				fvals[i] = Integer.parseInt(svals[i]);
+			}
+		}
+		return fvals;
+	}
+	public double[] getDoubles(int col) { return getDoubles(get(col)); }
+	public double[] getDoubles(String col) { return getDoubles(get(col)); }
+	public double[] getDoubles(String svals[])
+	{
+		double[] fvals = null;
+		int n = svals.length;
+		if (svals != null)
+		{
+			fvals = new double[n];
+			for(int i=0; i<n; i++)
+			{
+				fvals[i] = (svals[i].trim().equals("")? 0F : Double.parseDouble(svals[i]));
 			}
 		}
 		return fvals;
@@ -196,9 +231,12 @@ public class SimpleCSV
 		BufferedReader r = new BufferedReader(new InputStreamReader(in));
 		_colNames = null;
 		// assume a header
+		int ccnt = 0;
 		String line = r.readLine();
-		setHeader(new StringParse(line,",").setQuoteChar('\'').getTokens());
-		int ccnt = _cols.size();
+		if (line != null) {
+			setHeader(new StringParse(line, ",").setQuoteChar('\'').getTokens());
+			ccnt = _cols.size();
+		}
 		// load the data
 		while((line = r.readLine()) != null)
 		{
