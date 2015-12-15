@@ -18,7 +18,7 @@ import com.powerdata.openpa.PflowModelBuilder;
 import com.powerdata.openpa.SubLists;
 import com.powerdata.openpa.pwrflow.ACBranchExtList.ACBranchExt;
 import com.powerdata.openpa.tools.PAMath;
-import com.powerdata.openpa.tools.SpSymFltMatrix;
+import com.powerdata.openpa.tools.matrix.SpSymFltMatrix;
 
 
 /**
