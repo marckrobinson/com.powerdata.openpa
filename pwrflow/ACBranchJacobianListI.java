@@ -1,12 +1,19 @@
 package com.powerdata.openpa.pwrflow;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import com.powerdata.openpa.ACBranch;
+import com.powerdata.openpa.ACBranchList;
 import com.powerdata.openpa.ACBranchListIfc;
+import com.powerdata.openpa.BusList;
 import com.powerdata.openpa.BusRefIndex;
+import com.powerdata.openpa.PAModel;
 import com.powerdata.openpa.PAModelException;
+import com.powerdata.openpa.PflowModelBuilder;
 import com.powerdata.openpa.pwrflow.ACBranchJacobianList.ACBranchJacobian;
 import com.powerdata.openpa.tools.Complex;
+import com.powerdata.openpa.tools.PAMath;
 
 public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobian> implements ACBranchJacobianList
 {
@@ -317,5 +324,52 @@ public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobian> im
 	public float[] getdTQdTVa()
 	{
 		return _dtqdta;
+	}
+	
+	public static void main(String... args) throws Exception
+	{
+		String uri = null;
+		File poutdir = new File(System.getProperty("user.dir"));
+		for (int i = 0; i < args.length;)
+		{
+			String s = args[i++].toLowerCase();
+			int ssx = 1;
+			if (s.startsWith("--")) ++ssx;
+			switch (s.substring(ssx))
+			{
+				case "uri":
+					uri = args[i++];
+					break;
+				case "outdir":
+					poutdir = new File(args[i++]);
+					break;
+			}
+		}
+		if (uri == null)
+		{
+			System.err.format("Usage: -uri model_uri "
+					+ "[ --outdir output_directory (deft to $CWD ]\n");
+			System.exit(1);
+		}
+		final File outdir = poutdir;
+		if (!outdir.exists()) outdir.mkdirs();
+		PflowModelBuilder bldr = PflowModelBuilder.Create(uri);
+		bldr.enableFlatVoltage(false);
+		bldr.setLeastX(0.0001f);
+		bldr.setUnitRegOverride(false);
+		// bldr.enableRCorrection(true);
+		PAModel m = bldr.load();
+		BusRefIndex bri = BusRefIndex.CreateFromSingleBuses(m);
+		BusList sbus = bri.getBuses();
+		float[] vmpu = PAMath.vmpu(sbus);
+		float[] varad = PAMath.deg2rad(sbus.getVA());
+		ListDumper ld = new ListDumper();
+		for(ACBranchList b : m.getACBranches())
+		{
+			ACBranchJacobianList l = new ACBranchJacobianListI(b, bri);
+			l.calc(vmpu, varad);
+			File nfile = new File(outdir, b.getListMeta().toString()+".csv");
+			ld.dumpList(nfile, l);
+		}
 	}
 }
