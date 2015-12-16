@@ -2,7 +2,6 @@ package com.powerdata.openpa.pwrflow;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import com.powerdata.openpa.ACBranch;
 import com.powerdata.openpa.ACBranchListIfc;
@@ -11,6 +10,7 @@ import com.powerdata.openpa.BusRefIndex;
 import com.powerdata.openpa.PAModelException;
 import com.powerdata.openpa.TwoTermBaseList;
 import com.powerdata.openpa.tools.Complex;
+import com.powerdata.openpa.tools.ComplexList;
 
 /**
  * Interface to extend AC Branch with some additional tweaks
@@ -65,7 +65,7 @@ public interface ACBranchExtList<T extends com.powerdata.openpa.pwrflow.ACBranch
 	Complex getY(int ndx);
 	
 	/** Return branch admittance on system (100MVA) base */
-	List<Complex> getY();
+	ComplexList getY();
 	
 	/**
 	 * Return from-side bus. Can either be on connectivity- or single-bus
@@ -121,9 +121,14 @@ public interface ACBranchExtList<T extends com.powerdata.openpa.pwrflow.ACBranch
 	 * @return
 	 * @throws PAModelException
 	 */
-	public static <T extends ACBranchExt> ACBranchExtList<T> LoadExtension(
+	static <T extends ACBranchExt> ACBranchExtList<T> LoadExtension(
 		ACBranchListIfc<? extends ACBranch> list, BusRefIndex bri) throws PAModelException
 	{
 		return new ACBranchExtListI<>(list, bri);
 	}
+
+	ACBranchListIfc<? extends ACBranch> getList();
+
+	BusRefIndex getBusRefIndex();
+	
 }

@@ -32,6 +32,17 @@ public class ACBranchExtListI<T extends ACBranchExt> extends
 		}.inv();
 	}
 	
+	public ACBranchExtListI(ACBranchExtList<? extends ACBranchExt> copy)
+	{
+		_list = copy.getList();
+		_y = copy.getY();
+		_bri = copy.getBusRefIndex();
+	}
+	
+	@Override
+	public ACBranchListIfc<? extends ACBranch> getList() {return _list;}
+	@Override
+	public BusRefIndex getBusRefIndex() {return _bri;}
 
 	@Override
 	public int size() {return _list.size();}
