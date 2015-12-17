@@ -2,7 +2,7 @@ package com.powerdata.openpa.tools.matrix;
 
 import com.powerdata.openpa.tools.matrix.Matrix;
 
-public interface JacobianMatrix extends Matrix<com.powerdata.openpa.tools.matrix.JacobianMatrix.Element>
+public interface JacobianMatrix extends Matrix<JacobianElement>
 {
 	public static class Element implements JacobianElement
 	{

@@ -34,8 +34,6 @@ public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobianList
 		prep();
 	}
 	
-	
-	
 	private void prep() throws PAModelException
 	{
 		BusRefIndex.TwoTerm t = _bri.get2TBus(_list);
@@ -92,33 +90,34 @@ public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobianList
 			/* From-side active power */
 			float tdfpdv = gcos + bsin;
 			_fself.decDpdv(i, dwdvf * tdfpdv - 2f * g * fvm / ft2);
-			_dfpdtm[i] = dwdvt * tdfpdv;
+			_fmut.decDpdv(i, dwdvt * tdfpdv);
 			float dfpdfa = wbcos - wgsin;
 			_fself.decDpda(i, dfpdfa);
-			_dfpdta[i] = -_dfpdfa[i]; 
+			_fmut.incDpda(i, dfpdfa); 
 
 			/* from-side reactive power */
 			float tdfqv = gsin - bcos;
 			_fself.decDqdv(i, dwdvf * tdfqv + 2f * fvm * (bbmag + fbch[i]) / ft2);
-			_dfqdtm[i] = dwdvt * tdfqv;
+			_fmut.decDqdv(i, dwdvt * tdfqv);
 			float dfqdfa = wgcos + wbsin;
-			_fself.decDqda(i, -dfqdfa);
-			_dfqdta[i] = -_dfqdfa[i];
+			_fself.decDqda(i, dfqdfa);
+			_fmut.incDqda(i, dfqdfa);
 			
 			/* to-side active power */
 			float tdtpdv = gcos - bsin;
-			_dtpdfm[i] = dwdvf * tdtpdv;
+			_tmut.decDpdv(i, dwdvf * tdtpdv);
 			_tself.decDpdv(i, dwdvt * tdtpdv - 2f * g * tvm / tt2);
 			float dtpdfa = -wgsin - wbcos; 
-			_dtpdfa[i] = -wgsin - wbcos;
+			_tmut.decDpda(i, dtpdfa);
 			_tself.incDpda(i, dtpdfa);
 			
 			/* to-side reactive power */
 			float tdtqdv = gsin + bcos;
-			_dtqdfm[i] = -dwdvf * tdtqdv;
-			_dtqdtm[i] = -dwdvt * tdtqdv + 2f * tvm * (bbmag + tbch[i]) / tt2;
-			_dtqdfa[i] = -wgcos + wbsin;
-			_dtqdta[i] = -_dtqdfa[i];
+			_tmut.decDqdv(i, -dwdvf * tdtqdv);
+			_tself.decDqdv(i, -dwdvt * tdtqdv + 2f * tvm * (bbmag + tbch[i]) / tt2);
+			float dtqdfa = -wgcos + wbsin; 
+			_tmut.decDqda(i, dtqdfa); 
+			_tself.incDqda(i, dtqdfa);
 			
 		}
 			
