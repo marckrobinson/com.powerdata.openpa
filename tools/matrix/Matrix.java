@@ -5,14 +5,8 @@ package com.powerdata.openpa.tools.matrix;
  * @author chris@powerdata.com
  *
  */
-public interface Matrix<T extends com.powerdata.openpa.tools.matrix.Matrix.Element>
+public interface Matrix<T>
 {
-	interface Element
-	{
-		Element addElement(Element e);
-		Element subElement(Element e);
-	}
-
 	/** 
 	 * Return the number of rows in the matrix.
 	 * @return Number of matrix rows
