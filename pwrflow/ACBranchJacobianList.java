@@ -2,6 +2,7 @@ package com.powerdata.openpa.pwrflow;
 
 import com.powerdata.openpa.PAModelException;
 import com.powerdata.openpa.tools.matrix.JacobianElement;
+import com.powerdata.openpa.tools.matrix.JacobianMatrix;
 
 public interface ACBranchJacobianList extends 
 	ACBranchExtList<com.powerdata.openpa.pwrflow.ACBranchJacobianList.ACBranchJacobian> 
@@ -32,6 +33,8 @@ public interface ACBranchJacobianList extends
 		return new ACBranchJacobian(this, index);
 	}
 	
-	void calc(float[] vmpu, float[] varad) throws PAModelException;
+	ACBranchJacobianList calc(float[] vmpu, float[] varad) throws PAModelException;
+	
+	void apply(JacobianMatrix m);
 
 }

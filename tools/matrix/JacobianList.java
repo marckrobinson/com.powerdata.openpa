@@ -43,9 +43,14 @@ public interface JacobianList extends List<JacobianElement>
 		@Override
 		public void decDqdv(float v) {_list.decDqdv(_ndx, v);}
 		@Override
-		public void add(JacobianElement e) {_list.add(_ndx, e);}
+		public void add(JacobianElement e) {_list.addJacobian(_ndx, e);}
 		@Override
-		public void sub(JacobianElement e) {_list.sub(_ndx, e);}
+		public void subtract(JacobianElement e) {_list.subtractJacobian(_ndx, e);}
+		@Override
+		public String toString()
+		{
+			return String.format("[%f,%f,%f,%f]", getDpda(), getDpdv(), getDqda(), getDqdv());
+		}
 	}
 	
 	@Override
@@ -70,14 +75,14 @@ public interface JacobianList extends List<JacobianElement>
 	default void decDpdv(int ndx, float v) { incDpdv(ndx, -v); }
 	default void decDqda(int ndx, float v) { incDqda(ndx, -v); }
 	default void decDqdv(int ndx, float v) { incDqdv(ndx, -v); }
-	default void add(int ndx, JacobianElement e)
+	default void addJacobian(int ndx, JacobianElement e)
 	{
 		incDpda(ndx, e.getDpda());
 		incDpdv(ndx, e.getDpdv());
 		incDqda(ndx, e.getDqda());
 		incDqdv(ndx, e.getDqdv());
 	}
-	default void sub(int ndx, JacobianElement e)
+	default void subtractJacobian(int ndx, JacobianElement e)
 	{
 		decDpda(ndx, e.getDpda());
 		decDpdv(ndx, e.getDpdv());

@@ -8,6 +8,7 @@ import com.powerdata.openpa.tools.Complex;
 import com.powerdata.openpa.tools.matrix.JacobianArrayList;
 import com.powerdata.openpa.tools.matrix.JacobianElement;
 import com.powerdata.openpa.tools.matrix.JacobianList;
+import com.powerdata.openpa.tools.matrix.JacobianMatrix;
 
 public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobianList.ACBranchJacobian>
 		implements ACBranchJacobianList
@@ -57,7 +58,7 @@ public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobianList
 	public JacobianElement getToMutual(int ndx) { return _tmut.get(ndx); }
 
 	@Override
-	public void calc(float[] vm, float[] va) throws PAModelException
+	public ACBranchJacobianListI calc(float[] vm, float[] va) throws PAModelException
 	{
 		for(JacobianList l : _jlist) l.reset();
 		int n = size();
@@ -120,6 +121,20 @@ public class ACBranchJacobianListI extends ACBranchExtListI<ACBranchJacobianList
 			_tself.incDqda(i, dtqdfa);
 			
 		}
-			
+		return this;
+	}
+
+	@Override
+	public void apply(JacobianMatrix m)
+	{
+		int n = size();
+		for(int i=0; i < n; ++i)
+		{
+			int f = _fbus[i], t = _tbus[i];
+			m.addValue(f, f, _fself.get(i));
+			m.addValue(t, t, _tself.get(i));
+			m.addValue(f, t, _fmut.get(i));
+			m.addValue(t, f, _tmut.get(i));
+		}
 	}
 }

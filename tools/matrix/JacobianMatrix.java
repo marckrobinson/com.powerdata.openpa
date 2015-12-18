@@ -1,5 +1,20 @@
 package com.powerdata.openpa.tools.matrix;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.HashSet;
+import java.util.Set;
+import com.powerdata.openpa.ACBranch;
+import com.powerdata.openpa.ACBranchListIfc;
+import com.powerdata.openpa.BusList;
+import com.powerdata.openpa.BusRefIndex;
+import com.powerdata.openpa.PAModel;
+import com.powerdata.openpa.PflowModelBuilder;
+import com.powerdata.openpa.pwrflow.ACBranchJacobianList;
+import com.powerdata.openpa.pwrflow.ACBranchJacobianListI;
+import com.powerdata.openpa.tools.PAMath;
 import com.powerdata.openpa.tools.matrix.Matrix;
 
 public interface JacobianMatrix extends Matrix<JacobianElement>
@@ -47,19 +62,24 @@ public interface JacobianMatrix extends Matrix<JacobianElement>
 		@Override
 		public void decDqdv(float v) {_m.decDqdv(_r, _c, v);}
 		@Override
-		public void add(JacobianElement e) {_m.add(_r, _c, e);}
+		public void add(JacobianElement e) {_m.addValue(_r, _c, e);}
 		@Override
-		public void sub(JacobianElement e) {_m.sub(_r, _c, e);}
+		public void subtract(JacobianElement e) {_m.subValue(_r, _c, e);}
+		@Override
+		public String toString()
+		{
+			return String.format("[%f,%f,%f,%f]", getDpda(), getDpdv(), getDqda(), getDqdv());
+		}
 	}
 
-	float getDpda(int row, int column);
-	float getDpdv(int row, int column);
-	float getDqda(int row, int column);
-	float getDqdv(int row, int column);
-	void setDpda(int row, int column, float v);
-	void setDpdv(int row, int column, float v);
-	void setDqda(int row, int column, float v);
-	void setDqdv(int row, int column, float v);
+	default float getDpda(int row, int column) {return getValue(row, column).getDpda();}
+	default float getDpdv(int row, int column) {return getValue(row, column).getDpdv();}
+	default float getDqda(int row, int column) {return getValue(row, column).getDqda();}
+	default float getDqdv(int row, int column) {return getValue(row, column).getDqdv();}
+	default void setDpda(int row, int column, float v) {getValue(row, column).setDpda(v);} 
+	default void setDpdv(int row, int column, float v) {getValue(row, column).setDpdv(v);}
+	default void setDqda(int row, int column, float v) {getValue(row, column).setDqda(v);}
+	default void setDqdv(int row, int column, float v) {getValue(row, column).setDqdv(v);}
 	default void incDpda(int row, int column, float v)
 	{
 		setDpda(row, column, v+getDpda(row, column));
@@ -92,19 +112,90 @@ public interface JacobianMatrix extends Matrix<JacobianElement>
 	{
 		incDqdv(row, column, -v);
 	}
-	default void add(int row, int column, JacobianElement e)
+	@Override
+	default void addValue(int row, int column, JacobianElement e)
 	{
 		incDpda(row, column, e.getDpda());
 		incDpdv(row, column, e.getDpdv());
 		incDqda(row, column, e.getDqda());
 		incDqdv(row, column, e.getDqdv());
 	}
-	default void sub(int row, int column, JacobianElement e)
+	@Override
+	default void subValue(int row, int column, JacobianElement e)
 	{
 		decDpda(row, column, e.getDpda());
 		decDpdv(row, column, e.getDpdv());
 		decDqda(row, column, e.getDqda());
 		decDqdv(row, column, e.getDqdv());
+	}
+
+	default void dump(PrintWriter pw, String[] colid, String[] rowid)
+	{
+		int nc = getColumnCount(), nr = getRowCount();
+		for(int i=0; i < nc; ++i)
+		{
+			pw.print(',');
+			pw.print(colid[i]);
+		}
+		pw.println();
+		for(int ir=0; ir < nr; ++ir)
+		{
+			pw.print(rowid[ir]);
+			pw.print(',');
+			for(int ic=0; ic < nc; ++ic)
+			{
+				pw.format("%f,%f,%f,%f,",
+					getDp
+			}
+		}
+	}
+
+	
+	public static void main(String...args) throws Exception
+	{
+		String uri = null;
+		File poutdir = new File(System.getProperty("user.dir"));
+		for(int i=0; i < args.length;)
+		{
+			String s = args[i++].toLowerCase();
+			int ssx = 1;
+			if (s.startsWith("--")) ++ssx;
+			switch(s.substring(ssx))
+			{
+				case "uri":
+					uri = args[i++];
+					break;
+				case "outdir":
+					poutdir = new File(args[i++]);
+					break;
+			}
+		}
+		if (uri == null)
+		{
+			System.err.format("Usage: -uri model_uri "
+					+ "[ --outdir output_directory (deft to $CWD ]\n");
+			System.exit(1);
+		}
+		final File outdir = poutdir;
+		if (!outdir.exists()) outdir.mkdirs();
+		PflowModelBuilder bldr = PflowModelBuilder.Create(uri);
+		bldr.enableFlatVoltage(false);
+		bldr.setLeastX(0.0001f);
+		bldr.setUnitRegOverride(false);
+		PAModel m = bldr.load();
+		BusRefIndex bri = BusRefIndex.CreateFromSingleBuses(m);
+		BusList buses = bri.getBuses();
+		int nbus = buses.size();
+		float[] vm = PAMath.vmpu(buses);
+		float[] va = PAMath.deg2rad(buses.getVA());
+
+		JacobianMatrix jm = new ArrayJacobianMatrix(nbus, nbus);
+		Set<ACBranchJacobianList> jl = new HashSet<>();
+		for(ACBranchListIfc<? extends ACBranch> b : m.getACBranches())
+			jl.add(new ACBranchJacobianListI(b, bri).calc(vm, va));
+		jl.forEach(i -> i.apply(jm));
+		jm.dump(new PrintWriter(new BufferedWriter(new FileWriter(new File(outdir, "jmtrx.csv")))));
+		
 	}
 
 }

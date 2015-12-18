@@ -10,6 +10,8 @@ public class ArrayJacobianMatrix implements JacobianMatrix
 		_nrow = nrow;
 		_ncol = ncol;
 		_m = new JacobianArrayList[ncol];
+		for(int i=0; i < ncol; ++i)
+			_m[i] = new JacobianArrayList(nrow);
 	}
 	
 	@Override
@@ -27,83 +29,25 @@ public class ArrayJacobianMatrix implements JacobianMatrix
 	@Override
 	public void setValue(int row, int column, JacobianElement value)
 	{
-		_m[column].set(row, value);
+		_m[column].replace(row, value);
 	}
 
 	@Override
 	public JacobianElement getValue(int row, int column)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return _m[column].get(row);
 	}
 
 	@Override
 	public void addValue(int row, int column, JacobianElement value)
 	{
-		// TODO Auto-generated method stub
-		
+		_m[column].addJacobian(row, value);
 	}
 
 	@Override
 	public void subValue(int row, int column, JacobianElement value)
 	{
-		// TODO Auto-generated method stub
-		
+		_m[column].subtractJacobian(row, value);
 	}
-
-	@Override
-	public float getDpda(int row, int column)
-	{
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public float getDpdv(int row, int column)
-	{
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public float getDqda(int row, int column)
-	{
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public float getDqdv(int row, int column)
-	{
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public void setDpda(int row, int column, float v)
-	{
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void setDpdv(int row, int column, float v)
-	{
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void setDqda(int row, int column, float v)
-	{
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void setDqdv(int row, int column, float v)
-	{
-		// TODO Auto-generated method stub
-		
-	}
+	
 }

@@ -2,6 +2,7 @@ package com.powerdata.openpa.tools.matrix;
 
 import java.util.AbstractList;
 import java.util.Arrays;
+import com.powerdata.openpa.tools.matrix.JacobianElement.JacobianElementContainer;
 
 public class JacobianArrayList extends AbstractList<JacobianElement>
 		implements JacobianList
@@ -43,7 +44,58 @@ public class JacobianArrayList extends AbstractList<JacobianElement>
 	{
 		for(float[] a : _vals) Arrays.fill(a, 0f);
 	}
+
+	@Override
+	public JacobianElement set(int index, JacobianElement element)
+	{
+		JacobianElementContainer rv = new JacobianElement.JacobianElementContainer(
+				_dpda[index], _dpdv[index], _dqda[index], _dqdv[index]);
+		_dpda[index] = element.getDpda();
+		_dpdv[index] = element.getDpdv();
+		_dqda[index] = element.getDqda();
+		_dqdv[index] = element.getDqdv();
+		return rv;
+	}
 	
-	TODO:  Add set
+	/**
+	 * Set the element, but don't worry about a return value
+	 * @param index
+	 * @param e
+	 */
+	public void replace(int index, JacobianElement e)
+	{
+		_dpda[index] = e.getDpda();
+		_dpdv[index] = e.getDpdv();
+		_dqda[index] = e.getDqda();
+		_dqdv[index] = e.getDqdv();
+	}
+	
+	/**
+	 * Sum jacobian components in place
+	 * @param index
+	 * @param e
+	 */
+	@Override
+	public void addJacobian(int index, JacobianElement e)
+	{
+		_dpda[index] += e.getDpda();
+		_dpdv[index] += e.getDpdv();
+		_dqda[index] += e.getDqda();
+		_dqdv[index] += e.getDqdv();
+	}
+	
+	/**
+	 * Sum jacobian components in place
+	 * @param index
+	 * @param e
+	 */
+	@Override
+	public void subtractJacobian(int index, JacobianElement e)
+	{
+		_dpda[index] += e.getDpda();
+		_dpdv[index] += e.getDpdv();
+		_dqda[index] += e.getDqda();
+		_dqdv[index] += e.getDqdv();
+	}
 	
 }
