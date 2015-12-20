@@ -38,7 +38,7 @@ public interface FloatMatrix
 		 * @param column location of updated value
 		 * @param value to add at given location
 		 */
-		void addValue(int row, int column, float value);
+	void addValue(int row, int column, float value);
 	/**
 	 * Multiply a value in place
 	 * @param row location of updated value

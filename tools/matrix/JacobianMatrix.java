@@ -144,9 +144,9 @@ public interface JacobianMatrix extends Matrix<JacobianElement>
 			pw.print(',');
 			for(int ic=0; ic < nc; ++ic)
 			{
-				pw.format("%f,%f,%f,%f,",
-					getDp
+				pw.format("\"%s\",", getValue(ir, ic));
 			}
+			pw.println();
 		}
 	}
 
@@ -188,13 +188,16 @@ public interface JacobianMatrix extends Matrix<JacobianElement>
 		int nbus = buses.size();
 		float[] vm = PAMath.vmpu(buses);
 		float[] va = PAMath.deg2rad(buses.getVA());
+		String[] names = buses.getID();
 
 		JacobianMatrix jm = new ArrayJacobianMatrix(nbus, nbus);
 		Set<ACBranchJacobianList> jl = new HashSet<>();
 		for(ACBranchListIfc<? extends ACBranch> b : m.getACBranches())
 			jl.add(new ACBranchJacobianListI(b, bri).calc(vm, va));
 		jl.forEach(i -> i.apply(jm));
-		jm.dump(new PrintWriter(new BufferedWriter(new FileWriter(new File(outdir, "jmtrx.csv")))));
+		PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(new File(outdir, "jmtrx.csv"))));
+		jm.dump(pw, names, names);
+		pw.close();
 		
 	}
 
