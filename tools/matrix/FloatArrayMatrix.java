@@ -1,5 +1,7 @@
 package com.powerdata.openpa.tools.matrix;
 
+import java.io.PrintWriter;
+
 /**
  * A simple array-backed matrix with floating-point values
  * 
@@ -50,4 +52,26 @@ public class FloatArrayMatrix implements FloatMatrix
 	{
 		_m[row][column] *= value;
 	}
+	
+	public void dump(PrintWriter pw, String[] rowid, String[] colid)
+	{
+		int nc = getColumnCount(), nr = getRowCount();
+		for(int i=0; i < nc; ++i)
+		{
+			pw.print(',');
+			pw.print(colid[i]);
+		}
+		pw.println();
+		for(int ir=0; ir < nr; ++ir)
+		{
+			pw.print(rowid[ir]);
+			pw.print(',');
+			for(int ic=0; ic < nc; ++ic)
+			{
+				pw.format("%f", getValue(ir, ic));
+			}
+			pw.println();
+		}
+	}
+
 }
